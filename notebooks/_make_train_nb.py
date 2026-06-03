@@ -46,8 +46,11 @@ code("""
 #    install ONLY the missing pieces (upgrading torch breaks the CUDA pairing).
 import subprocess, torch
 print("CUDA:", torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else "")
-subprocess.run("pip install -q 'transformers>=4.44' 'datasets>=2.20' 'accelerate>=0.33' "
+# Pin transformers to a known-good 4.x: transformers 5.x removed
+# Seq2SeqTrainingArguments(overwrite_output_dir=...) and changed Trainer internals.
+subprocess.run("pip install -q 'transformers==4.46.3' 'datasets>=2.20' 'accelerate>=0.34' "
                "sentencepiece evaluate huggingface_hub", shell=True, check=True)
+import transformers; print("transformers", transformers.__version__)
 """)
 
 code(f"""
@@ -64,15 +67,18 @@ code(f"""
 import os
 if not os.path.exists('sanskrit-ocr-correction'):
     subprocess.run("git clone {REPO_URL}", shell=True, check=True)
+else:
+    subprocess.run("git -C sanskrit-ocr-correction pull", shell=True, check=True)
 os.chdir('sanskrit-ocr-correction')
 print(os.getcwd())
 """)
 
 code("""
-# 4. Build the dataset on Colab: curated corpus + Ayurveda pages + HF augmentation
-#    (rahular/itihasa = clean Sanskrit from the epics). ~30k corrupted->clean pairs.
-subprocess.run("python -m src.data_prep --hf-dataset rahular/itihasa "
-               "--max-hf 3000 --variants 12", shell=True, check=True)
+# 4. Build the dataset on Colab: curated corpus + Ayurveda pages + HF augmentation.
+#    Sanskrit Wikipedia (Parquet, no loading script -> reliable on modern datasets).
+#    ~4k clean lines x 12 variants ≈ 40-50k corrupted->clean pairs.
+subprocess.run('python -m src.data_prep --hf-dataset "wikimedia/wikipedia:20231101.sa" '
+               '--max-hf 4000 --max-clean 4000 --variants 12', shell=True, check=True)
 import json
 print(open('data/processed/stats.json', encoding='utf-8').read())
 """)
@@ -147,20 +153,16 @@ from transformers import (AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq,
 model = AutoModelForSeq2SeqLM.from_pretrained(BASE)
 collator = DataCollatorForSeq2Seq(tok, model=model)
 
-# transformers renamed eval_strategy <- evaluation_strategy around v4.41
-_evk = 'eval_strategy' if transformers.__version__ >= '4.41' else 'evaluation_strategy'
-args_kw = dict(
-    output_dir='byt5-sanskrit-ocr', overwrite_output_dir=True,
+training_args = Seq2SeqTrainingArguments(
+    output_dir='byt5-sanskrit-ocr',
     learning_rate=5e-4, per_device_train_batch_size=8,
     per_device_eval_batch_size=16, gradient_accumulation_steps=2,
     num_train_epochs=3, warmup_ratio=0.03, weight_decay=0.01,
     fp16=True, predict_with_generate=True, generation_max_length=MAX_TGT,
-    logging_steps=50, save_strategy='epoch', save_total_limit=2,
+    logging_steps=50, eval_strategy='epoch', save_strategy='epoch', save_total_limit=2,
     load_best_model_at_end=True, metric_for_best_model='cer', greater_is_better=False,
     push_to_hub=True, hub_model_id=HF_MODEL_ID, hub_strategy='every_save',
     report_to='none')
-args_kw[_evk] = 'epoch'
-training_args = Seq2SeqTrainingArguments(**args_kw)
 
 trainer = Seq2SeqTrainer(
     model=model, args=training_args,

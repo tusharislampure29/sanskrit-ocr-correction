@@ -64,18 +64,31 @@ def load_bundled() -> list[str]:
 
 
 def load_hf(dataset: str, max_rows: int) -> list[str]:
-    """Stream a HF dataset and auto-detect the Devanagari-bearing text field."""
+    """Stream a HF dataset and auto-detect the Devanagari-bearing text field.
+
+    Default recommendation: `wikimedia/wikipedia:20231101.sa` (Sanskrit Wikipedia,
+    Parquet — no loading script, so it works on modern `datasets`). Script-based
+    datasets (e.g. rahular/itihasa) are NOT loadable on datasets>=3 without a
+    loading script, which is why we don't rely on them.
+    """
     try:
         from datasets import load_dataset
     except ImportError:
         print("  [hf] `datasets` not installed; skipping HF source.")
         return []
     name, _, config = dataset.partition(":")
-    print(f"  [hf] streaming {name}" + (f" ({config})" if config else ""))
-    try:
-        ds = load_dataset(name, config or None, split="train", streaming=True)
-    except Exception as e:  # noqa: BLE001
-        print(f"  [hf] could not load {dataset}: {e}")
+    print(f"  [hf] streaming {name}" + (f" (config={config})" if config else ""), flush=True)
+
+    ds = None
+    for kw in ({}, {"trust_remote_code": True}):
+        try:
+            ds = load_dataset(name, config or None, split="train", streaming=True, **kw)
+            break
+        except Exception as e:  # noqa: BLE001
+            print(f"  [hf] load attempt {kw or 'default'} failed: {type(e).__name__}: {e}",
+                  flush=True)
+    if ds is None:
+        print(f"  [hf] giving up on {dataset}; using bundled corpus only.", flush=True)
         return []
 
     def dev_strings(obj):
@@ -90,16 +103,20 @@ def load_hf(dataset: str, max_rows: int) -> list[str]:
                 yield from dev_strings(v)
 
     out: list[str] = []
-    for row in ds:
-        for s in dev_strings(row):
-            out.append(s)
+    try:
+        for row in ds:
+            for s in dev_strings(row):
+                out.append(s)
             if len(out) >= max_rows:
-                return out
+                break
+    except Exception as e:  # noqa: BLE001
+        print(f"  [hf] streaming stopped early: {type(e).__name__}: {e}", flush=True)
+    print(f"  [hf] collected {len(out)} Devanagari strings from {name}", flush=True)
     return out
 
 
 def collect_clean(min_len: int, max_len: int, hf_dataset: str | None,
-                  max_hf: int) -> list[str]:
+                  max_hf: int, max_clean: int = 0, seed: int = 13) -> list[str]:
     raw = load_bundled()
     if hf_dataset:
         raw += load_hf(hf_dataset, max_hf)
@@ -122,6 +139,16 @@ def collect_clean(min_len: int, max_len: int, hf_dataset: str | None,
         if c not in seen:
             seen.add(c)
             uniq.append(c)
+
+    # keep the bundled corpus (it's curated + on-domain) and cap the rest
+    if max_clean and len(uniq) > max_clean:
+        import random
+        bundled = set(clean_line(p) + " ।" for p in load_bundled())  # rough overlap guard
+        priority = [c for c in uniq if c in bundled]
+        rest = [c for c in uniq if c not in bundled]
+        rng = random.Random(seed)
+        rng.shuffle(rest)
+        uniq = priority + rest[:max(0, max_clean - len(priority))]
     return uniq
 
 
@@ -179,12 +206,16 @@ def main():
     ap.add_argument("--test-frac", type=float, default=0.1)
     ap.add_argument("--hf-dataset", default=None,
                     help="optional HF dataset id, e.g. rahular/itihasa[:config]")
-    ap.add_argument("--max-hf", type=int, default=8000)
+    ap.add_argument("--max-hf", type=int, default=8000,
+                    help="max rows/articles to pull from the HF source")
+    ap.add_argument("--max-clean", type=int, default=0,
+                    help="cap on total unique clean lines (0 = no cap)")
     ap.add_argument("--seed", type=int, default=13)
     args = ap.parse_args()
 
     print("Collecting clean Sanskrit lines...")
-    clean = collect_clean(args.min_len, args.max_len, args.hf_dataset, args.max_hf)
+    clean = collect_clean(args.min_len, args.max_len, args.hf_dataset, args.max_hf,
+                          args.max_clean, args.seed)
     print(f"  {len(clean)} unique clean lines")
     if len(clean) < 10:
         raise SystemExit("Too few clean lines — check the corpus / HF source.")
