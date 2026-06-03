@@ -1,0 +1,9 @@
+# GPU training deps — install on Colab T4 (the notebook handles this).
+# Do NOT install locally (no local NVIDIA GPU).
+torch
+transformers>=4.44
+datasets>=2.20
+accelerate>=0.33
+sentencepiece>=0.2.0
+evaluate>=0.4
+huggingface_hub>=0.24

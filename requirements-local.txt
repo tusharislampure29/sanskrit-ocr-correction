@@ -1,0 +1,8 @@
+# CPU-only deps for data prep, tokenizer analysis, and scoring.
+# NO torch here — training/inference run on Colab T4 (see requirements-train.txt).
+transformers>=4.44
+tokenizers>=0.19
+sentencepiece>=0.2.0      # mT5 tokenizer for the fragmentation analysis
+datasets>=2.20            # optional HF corpus augmentation in data_prep
+matplotlib>=3.8           # charts
+huggingface_hub>=0.24     # push dataset to the Hub

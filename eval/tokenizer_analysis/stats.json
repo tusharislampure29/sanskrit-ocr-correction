@@ -1,0 +1,32 @@
+{
+  "n_sanskrit_lines": 69,
+  "byt5": {
+    "tokens_per_char_clean": 2.837,
+    "tokens_per_char_noisy": 2.824,
+    "unk_tokens_clean": 0,
+    "unk_tokens_noisy": 0,
+    "note": "every UTF-8 byte is in-vocab; corruption can never create an <unk>"
+  },
+  "mt5": {
+    "sanskrit_clean": {
+      "tokens_per_char": 0.489,
+      "pct_words_fragmented": 89.9,
+      "unk_tokens": 0,
+      "n_tokens": 1095
+    },
+    "sanskrit_noisy": {
+      "tokens_per_char": 0.515,
+      "pct_words_fragmented": 90.3,
+      "unk_tokens": 0,
+      "n_tokens": 1142
+    },
+    "english": {
+      "tokens_per_char": 0.306,
+      "pct_words_fragmented": 31.0,
+      "unk_tokens": 0,
+      "n_tokens": 64
+    },
+    "frag_ratio_sanskrit_vs_english": 1.6,
+    "extra_fragmentation_when_noisy_pct": 5.3
+  }
+}
