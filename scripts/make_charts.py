@@ -27,38 +27,62 @@ def _score(triples):
     return score_triples(triples)
 
 
+def _summary():
+    """Optional fallback: eval/results/summary.json with scraped numbers
+    (so charts can be built without preds_test.json or a local GPU)."""
+    f = RES / "summary.json"
+    if f.exists():
+        return json.loads(f.read_text(encoding="utf-8-sig"))
+    return None
+
+
 def eval_comparison():
     f = RES / "preds_test.json"
     if not f.exists():
-        print("skip eval_comparison (no preds_test.json yet)")
+        summ = _summary()
+        if summ and "test" in summ:
+            _bar_before_after(summ["test"])
+            print("wrote eval_comparison.png (from summary.json)")
+            return
+        print("skip eval_comparison (no preds_test.json / summary.json yet)")
         return
-    s = _score(json.loads(f.read_text(encoding="utf-8")))
+    _bar_before_after(_score(json.loads(f.read_text(encoding="utf-8"))))
+    print("wrote eval_comparison.png")
+
+
+def _bar_before_after(s):
+    red = s.get("cer_reduction_pct")
+    if red is None and s.get("cer_before"):
+        red = (s["cer_before"] - s["cer_after"]) / s["cer_before"] * 100
     metrics = ["CER", "WER", "Exact match"]
     before = [s["cer_before"], s["wer_before"], s["exact_match_before"]]
     after = [s["cer_after"], s["wer_after"], s["exact_match_after"]]
-    x = range(len(metrics))
-    w = 0.35
+    x = range(len(metrics)); w = 0.35
     fig, ax = plt.subplots(figsize=(7, 4.2))
     ax.bar([i - w/2 for i in x], before, w, label="OCR output (before)", color="#D1495B")
     ax.bar([i + w/2 for i in x], after, w, label="ByT5-corrected (after)", color="#30638E")
     ax.set_xticks(list(x)); ax.set_xticklabels(metrics)
     ax.set_ylabel("rate (lower is better for CER/WER)")
     ax.set_title(f"Sanskrit OCR correction — CER {s['cer_before']:.3f} → {s['cer_after']:.3f} "
-                 f"({s['cer_reduction_pct']:+.0f}%)")
+                 f"({red:+.0f}%)")
     ax.legend()
     for i, (b, a) in enumerate(zip(before, after)):
         ax.text(i - w/2, b + 0.01, f"{b:.2f}", ha="center", fontsize=8)
         ax.text(i + w/2, a + 0.01, f"{a:.2f}", ha="center", fontsize=8)
     fig.tight_layout(); fig.savefig(CHARTS / "eval_comparison.png", dpi=140)
-    print("wrote eval_comparison.png")
 
 
 def taxonomy():
     f = RES / "taxonomy.json"
     if not f.exists():
-        print("skip taxonomy (no taxonomy.json yet)")
-        return
-    rep = json.loads(f.read_text(encoding="utf-8"))
+        summ = _summary()
+        if summ and "taxonomy" in summ:
+            rep = summ["taxonomy"]
+        else:
+            print("skip taxonomy (no taxonomy.json / summary.json yet)")
+            return
+    else:
+        rep = json.loads(f.read_text(encoding="utf-8"))
     fams = list(rep.keys())
     before = [rep[k]["cer_before"] for k in fams]
     after = [rep[k]["cer_after"] for k in fams]

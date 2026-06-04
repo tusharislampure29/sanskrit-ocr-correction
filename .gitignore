@@ -25,6 +25,7 @@ eval/results/*.json
 
 # internal dev notes (kept local; not part of the public/submitted repo)
 CLAUDE.md
+docs/SUBMISSION_EMAIL.md
 
 # OS
 .DS_Store
