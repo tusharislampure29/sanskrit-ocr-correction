@@ -52,17 +52,21 @@ size) for that guarantee. This is the central model-understanding tradeoff of th
 ## 4. Fine-tuning approach
 
 Seq2seq fine-tune of `google/byt5-small`, prefix `"correct: "`, source/target max length 384,
-lr 5e-4, effective batch 16 (8 × grad-accum 2), 3 epochs, weight decay 0.01, warmup 3%. fp16 on T4.
-`load_best_model_at_end` on **eval CER**. (LoRA is unnecessary here — ByT5-small full-FT fits a T4
-comfortably; full-FT is simpler and the model is small. A LoRA-vs-full comparison is the obvious
-bonus extension.)
+lr 3e-4, effective batch 16 (4 × grad-accum 4), 3 epochs, weight decay 0.01, warmup 5%. **bf16 on T4**
+— *not* fp16: T5/ByT5 activations overflow fp16's range, sending the loss to `NaN` on step 1 and
+producing a dead model (val_loss=nan, CER stuck ≈1.08). bf16's wider exponent (same as fp32) is
+numerically safe; on a T4 it runs in software (slower) but correct. `load_best_model_at_end` on
+**eval CER** (best checkpoint: val CER 0.033). (LoRA is unnecessary here — ByT5-small full-FT fits a
+T4 comfortably; a LoRA-vs-full comparison is the obvious bonus extension.)
 
 ## 5. Hardware constraints and optimizations
 
-Free Colab T4 (16 GB), no local GPU. Optimizations: fp16; ByT5-**small** (not base); short
-sequences; **push-to-Hub every epoch** (`hub_strategy='every_save'`) so a Colab disconnect resumes
-in minutes — a lesson carried from a prior project where a long run was lost to a session reap. The
-notebook installs only the missing pip pieces (upgrading Colab's torch breaks the CUDA pairing).
+Free Colab T4 (16 GB), no local GPU. Optimizations: bf16 (fp16 is unsafe for ByT5, see §4); ByT5-**small**
+(not base); short sequences; **push-to-Hub every epoch** (`hub_strategy='every_save'`) so a Colab
+disconnect resumes in minutes — a lesson carried from a prior project. It paid off directly: the free
+T4 was reaped at step 4004/4050 (99%), but the best checkpoint was already on the Hub, so the run was
+recovered with **zero retraining** and evaluated locally on CPU. The notebook installs only the
+missing pip pieces (upgrading Colab's torch breaks the CUDA pairing).
 
 ## 6. Evaluation methodology
 
@@ -72,15 +76,41 @@ Three layers (`src/eval_harness.py`):
 2. **Per-severity** — light/medium/heavy.
 3. **Error taxonomy** — corrupt test lines with *one* family at a time, measure recovery per family.
 
-Baseline (measured, bundled corpus): **CER 0.086**, WER 0.454, exact-match 0.000;
-per-severity CER 0.048 / 0.079 / 0.131. Post-training: `‹after numbers + taxonomy table›`.
+**Results (2,400-line held-out test set):**
+
+| Metric | before | after | Δ |
+|---|---|---|---|
+| WER ↓ | 0.554 | **0.239** | −57% |
+| Exact-match ↑ | 0.000 | **0.261** | +0.26 |
+| CER ↓ | 0.084 | **0.072** | −14% |
+
+Per-severity (CER before → after / WER before → after): light `0.046 → 0.063` / `0.355 → 0.185`;
+medium `0.080 → 0.072` / `0.556 → 0.238`; heavy `0.125 → 0.082` / `0.752 → 0.294`.
+
+The model is a **strong word-level corrector at every severity** (WER −48% to −61%, up to 37% of lines
+made exactly correct), and a character-level improver on medium/heavy noise. The one regression is CER
+on *light* input, where it over-corrects characters even as it fixes whole words (WER still drops 48%) —
+analysed in §7. Charts in `eval/charts/`; per-error-family taxonomy in `eval/results/taxonomy.json`.
 
 ## 7. Failure cases
 
-Expected (and what the taxonomy eval is designed to surface): heavy multi-error lines; consonant
-glyph confusions that produce a *valid* but wrong word (no local signal to fix); word-boundary
-errors on rare compounds; and out-of-distribution scanner artifacts not in the synthetic model.
-`‹concrete failure examples from the eval run›`
+Two failure modes show up in the eval, both expected:
+
+1. **Repetition / over-generation on heavy multi-error lines.** When several words are badly mangled,
+   the seq2seq decoder occasionally repeats a token instead of recovering the intended word:
+   ```
+   noisy : आयोुर्वीज्ञान  आयरवद चरक संहिता सुश्रुत स्ंह िता ॥
+   model : आयुर्विज्ञान आयुर्विज्ञान आयुर्वदा चरक संहिता सुश्रुत संहिता ।   ← repeats "आयुर्विज्ञान"
+   gold  : आयुर्विज्ञान आयुर्वेद चरक संहिता सुश्रुत संहिता ।
+   ```
+   Here CER actually rises (0.18 → 0.29) — the price of a decoder that will emit anything.
+2. **Character-level over-correction on light noise.** On near-clean input the model "fixes" things
+   that were already correct, nudging CER up (0.046 → 0.063 on the light split) even though WER still
+   improves (0.355 → 0.185). It learned to rewrite aggressively because most training pairs *needed*
+   rewriting; a fraction of clean-passthrough pairs, or a confidence/abstain gate (§9), would curb this.
+
+Also expected: consonant-glyph confusions that yield a *valid but wrong* word (no local signal to fix),
+and out-of-distribution scanner artifacts absent from the synthetic noise model.
 
 ## 8. Challenges encountered
 
@@ -102,7 +132,14 @@ on-device variant (the assignment's bonus items); a small Gradio demo.
 
 ---
 
-### Evaluation appendix (filled by the training run)
-- Qualitative outputs: `‹noisy → corrected pairs›`
-- Before vs after: `‹table›` · Metrics: CER/WER/EM · Charts: `eval/charts/`
-- Hallucination/error analysis: `‹where the model over-corrects or invents text›`
+### Evaluation appendix
+- Qualitative outputs (real held-out predictions):
+  ```
+  विश्तर््णं तावत् 4१290 कि.मि वर्त ते ॥   →   विस्तीर्णं तावत् ४१२९० कि.मी वर्तते ।   (heavy, CER 0.27→0.00)
+  मनोजकुम ारः भारतयःअभ िनता ।           →   मनोजकुमारः भारतीयः अभिनेता ।         (medium, CER 0.18→0.00)
+  तेन् देवताः वजयिनः अभबन् ।             →   तेन देवताः विजयिनः अभवन् ।            (light, CER 0.12→0.00)
+  ```
+- Before vs after: WER 0.554→0.239 (−57%), EM 0.000→0.261, CER 0.084→0.072 (−14%). Charts: `eval/charts/`
+  (`eval_comparison.png`, `taxonomy.png`, `training_loss.png`).
+- Hallucination/error analysis: see §7 — repetition on heavy lines; character-level over-correction on
+  light input.

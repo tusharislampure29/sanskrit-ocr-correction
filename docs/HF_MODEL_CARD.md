@@ -50,20 +50,24 @@ print(tok.decode(model.generate(ids, max_length=256, num_beams=4)[0], skip_speci
 
 ## Results
 
-Held-out test set, character error rate (CER) is the primary OCR metric:
+Held-out test set (2,400 lines), before vs after correction:
 
-| Metric | OCR output (before) | ByT5-corrected (after) |
-|---|---|---|
-| CER ↓ | 0.086 (baseline) | `‹after›` |
-| WER ↓ | 0.454 | `‹after›` |
-| Exact-match ↑ | 0.000 | `‹after›` |
+| Metric | OCR output (before) | ByT5-corrected (after) | Δ |
+|---|---|---|---|
+| WER ↓ | 0.554 | **0.239** | −57% |
+| Exact-match ↑ | 0.000 | **0.261** | +0.26 |
+| CER ↓ | 0.084 | **0.072** | −14% |
 
+A **strong word-level corrector**: it more than halves the word error rate and returns 26% of lines
+exactly correct. CER improves most on **heavily-degraded** input (0.125 → 0.082, −35%); on already-light
+noise it can over-correct at the character level (CER 0.046 → 0.063) while still cutting WER (0.355 → 0.185).
 Plus a per-error-family **taxonomy** eval (which error types it fixes best) — see the repo.
 
 ## Training
 
-ByT5-small, seq2seq, prefix `correct:`, max len 384, lr 5e-4, effective batch 16, 3 epochs, fp16 on
-T4, best-by-CER checkpoint. Dataset: [`tusharislampure29/sanskrit-ocr-correction`](https://huggingface.co/datasets/tusharislampure29/sanskrit-ocr-correction).
+ByT5-small, seq2seq, prefix `correct:`, max len 384, lr 3e-4, effective batch 16 (4 × grad-accum 4),
+3 epochs, **bf16** on T4 (fp16 is NaN-unstable for T5/ByT5), best-by-validation-CER checkpoint
+(val CER 0.033). Dataset: [`tusharislampure29/sanskrit-ocr-correction`](https://huggingface.co/datasets/tusharislampure29/sanskrit-ocr-correction).
 
 ## Limitations
 

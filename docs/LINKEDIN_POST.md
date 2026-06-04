@@ -1,7 +1,7 @@
 # LinkedIn post
 
 Primary draft below (recruiter hook on top, technical depth in the middle, honest limits at the
-bottom). Numbers marked `‹after›` get filled from the Colab eval before posting. **User clicks Post.**
+bottom). **Numbers are filled from the final eval — ready to post. User clicks Post.**
 
 ---
 
@@ -34,8 +34,11 @@ bottom). Numbers marked `‹after›` get filled from the Colab eval before post
 > every error it injects, so I can evaluate recovery *per error family* — not just one aggregate
 > number.
 >
-> Results on a held-out test set (character error rate, the metric that matters for OCR):
-> ‹CER 0.086 → ‹after›, a ‹XX›% reduction; plus a per-error-family taxonomy of what it fixes best›
+> Results on a 2,400-line held-out test set: word error rate 0.55 → 0.24 (−57%), and 26% of lines come
+> out *exactly* correct (up from zero). Character error rate drops most where it matters — on the
+> heavily-degraded scans (0.125 → 0.082). And it's honest about its limits: on already-clean input it
+> can over-correct, which is exactly why I built a per-error-family taxonomy eval to show what it fixes
+> and what it doesn't.
 >
 > Honest about what it is: trained on synthetic noise, so it's strongest on the error families it
 > was shown — novel scanner artifacts are out of distribution (which is exactly why I built the
@@ -56,8 +59,8 @@ bottom). Numbers marked `‹after›` get filled from the Colab eval before post
 
 ## Posting checklist
 
-- [ ] Fill `‹after›` numbers from `eval/results/preds_test.json` (cross-check the README table).
-- [ ] HF model card + README updated with the same numbers.
-- [ ] Three charts generated (`python scripts/make_charts.py`) and attached in order.
+- [x] Numbers filled from `eval/results/preds_test.json` (cross-checked vs README/report/email).
+- [x] HF model card + README updated with the same numbers.
+- [x] Three charts generated (`python scripts/make_charts.py`) and attached in order.
 - [ ] Marathi/Devanagari renders correctly in the preview; links show previews.
 - [ ] **User clicks Post.** Claude does not click Post.

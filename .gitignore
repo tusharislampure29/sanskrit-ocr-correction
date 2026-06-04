@@ -20,8 +20,12 @@ checkpoint-*/
 # HF cache
 .cache/
 
-# eval raw json (kept as summaries in docs/ instead)
+# eval raw json + transient logs (kept as summaries in docs/ instead)
 eval/results/*.json
+eval/results/*.log
+
+# scratch/throwaway helper scripts (underscore-prefixed)
+scripts/_*.py
 
 # internal dev notes (kept local; not part of the public/submitted repo)
 CLAUDE.md

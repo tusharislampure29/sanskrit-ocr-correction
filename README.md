@@ -24,15 +24,21 @@
 
 | Metric | OCR output (before) | ByT5-corrected (after) | Δ |
 |---|---|---|---|
-| **CER** ↓ | `0.086` (baseline, measured) | `‹after›` | `‹−XX%›` |
-| **WER** ↓ | `0.454` (measured) | `‹after›` | `‹−XX%›` |
-| **Exact-match** ↑ | `0.000` | `‹after›` | `‹+XX›` |
+| **WER** ↓ | `0.554` | `0.239` | **−57%** |
+| **Exact-match** ↑ | `0.000` | `0.261` | **+0.26** |
+| **CER** ↓ | `0.084` | `0.072` | **−14%** |
 
-> The **before** numbers are already measured on the held-out test split (`src/eval_harness.py --baseline`).
-> The **after** numbers are produced by the one-click Colab notebook (`notebooks/train_colab.ipynb`) — see
-> [Reproduce](#reproduce). This README is written so the training run only has to *fill the gaps*.
+> Measured on the **2,400-line held-out test split** (`src/eval_harness.py`, byte-level CER, NFC-normalized).
+> The model is a **strong word-level corrector**: it more than halves the word error rate and returns
+> **26% of lines exactly correct** (up from zero). Character error rate improves most where it matters —
+> on **heavily-degraded** scans (`0.125 → 0.082`, −35%). Honest nuance: on already-light noise it can
+> *over-correct* at the character level (CER `0.046 → 0.063`) even while it still fixes whole words
+> (WER `0.355 → 0.185`) — see [Limitations](#limitations-honest) and the per-severity tables below.
 
-**Per severity (baseline CER, the bar to beat):** light scans `0.046` · medium `0.080` · degraded `0.125`.
+**Per-severity CER (before → after):** light `0.046 → 0.063` · medium `0.080 → 0.072` · heavy `0.125 → 0.082`
+**Per-severity WER (before → after):** light `0.355 → 0.185` · medium `0.556 → 0.238` · heavy `0.752 → 0.294`
+
+![before/after CER, WER, exact-match](eval/charts/eval_comparison.png)
 
 ---
 
@@ -103,9 +109,11 @@ Split is **by clean line**, so no source verse leaks between train/val/test.
    pages from the assignment + Hugging Face augmentation from **Sanskrit Wikipedia**
    (`wikimedia/wikipedia:20231101.sa`, Parquet — loads reliably on modern `datasets`) for scale.
    Split by clean line → corrupt at 3 severities → `{noisy, clean}` JSONL.
-2. **Train** (`notebooks/train_colab.ipynb`) — ByT5-small, seq2seq, prefix `correct:`, fp16 on T4,
-   3 epochs, `load_best_model_at_end` on eval-CER, **push to HF Hub every epoch** so a Colab
-   disconnect costs minutes (a hard-won lesson from project 01).
+2. **Train** (`notebooks/train_colab.ipynb`) — ByT5-small, seq2seq, prefix `correct:`, **bf16** on T4
+   (fp16 is NaN-unstable for T5/ByT5 — activations overflow → dead model; bf16's wider exponent is
+   safe), 3 epochs, `load_best_model_at_end` on eval-CER, **push to HF Hub every epoch** so a Colab
+   disconnect costs minutes (a hard-won lesson from project 01 — and it paid off here when the runtime
+   was reaped at 99%; the best checkpoint was already on the Hub).
 3. **Eval** (`src/eval_harness.py`) — the three layers above, plus a qualitative demo on the
    Ayurveda pages.
 
@@ -135,7 +143,29 @@ Scoring is decoupled from a GPU (like project 01): the notebook saves prediction
 
 ## Sample I/O
 
-`‹filled from the Colab demo cell — noisy OCR → ByT5 correction, on the Ayurveda pages›`
+Real held-out test predictions (noisy OCR → ByT5 correction → gold):
+
+```
+# heavy noise — split conjunct, ASCII digits, danda-as-pipe, stray space  (CER 0.27 → 0.00)
+noisy : विश्तर््णं तावत् 4१290 कि.मि वर्त ते ॥
+model : विस्तीर्णं तावत् ४१२९० कि.मी वर्तते ।
+gold  : विस्तीर्णं तावत् ४१२९० कि.मी वर्तते ।
+
+# medium noise — word-boundary merges + dropped matras  (CER 0.18 → 0.00)
+noisy : मनोजकुम ारः भारतयःअभ िनता ।
+model : मनोजकुमारः भारतीयः अभिनेता ।
+gold  : मनोजकुमारः भारतीयः अभिनेता ।
+
+# light noise — halant + matra slips  (CER 0.12 → 0.00)
+noisy : तेन् देवताः वजयिनः अभबन् ।
+model : तेन देवताः विजयिनः अभवन् ।
+gold  : तेन देवताः विजयिनः अभवन् ।
+
+# honest failure — on a heavy multi-error line the model REPEATS a word (CER 0.18 → 0.29)
+noisy : आयोुर्वीज्ञान  आयरवद चरक संहिता सुश्रुत स्ंह िता ॥
+model : आयुर्विज्ञान आयुर्विज्ञान आयुर्वदा चरक संहिता सुश्रुत संहिता ।
+gold  : आयुर्विज्ञान आयुर्वेद चरक संहिता सुश्रुत संहिता ।
+```
 
 ## What I'd do with more time
 
