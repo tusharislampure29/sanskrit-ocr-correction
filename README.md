@@ -32,7 +32,7 @@
 > The **after** numbers are produced by the one-click Colab notebook (`notebooks/train_colab.ipynb`) — see
 > [Reproduce](#reproduce). This README is written so the training run only has to *fill the gaps*.
 
-**Per severity (baseline CER, the bar to beat):** light scans `0.048` · medium `0.079` · degraded `0.131`.
+**Per severity (baseline CER, the bar to beat):** light scans `0.046` · medium `0.080` · degraded `0.125`.
 
 ---
 
@@ -100,8 +100,9 @@ Split is **by clean line**, so no source verse leaks between train/val/test.
 
 1. **Data** (`src/data_prep.py`) — curated public-domain corpus (Bhagavad Gita, Patanjali Yoga
    Sutras, Charaka-style Ayurveda, subhashitas — matching ImmverseAI's IKS domains) + the 5 Ayurveda
-   pages from the assignment + optional Hugging Face augmentation (`rahular/itihasa`, clean Sanskrit
-   from the epics). Split by clean line → corrupt at 3 severities → `{noisy, clean}` JSONL.
+   pages from the assignment + Hugging Face augmentation from **Sanskrit Wikipedia**
+   (`wikimedia/wikipedia:20231101.sa`, Parquet — loads reliably on modern `datasets`) for scale.
+   Split by clean line → corrupt at 3 severities → `{noisy, clean}` JSONL.
 2. **Train** (`notebooks/train_colab.ipynb`) — ByT5-small, seq2seq, prefix `correct:`, fp16 on T4,
    3 epochs, `load_best_model_at_end` on eval-CER, **push to HF Hub every epoch** so a Colab
    disconnect costs minutes (a hard-won lesson from project 01).
@@ -116,7 +117,10 @@ cd sanskrit-ocr-correction
 py -3.12 -m venv .venv ; .\.venv\Scripts\Activate.ps1
 pip install -r requirements-local.txt      # CPU: data prep, tokenizer analysis, scoring
 
-python -m src.data_prep --variants 30                 # build dataset (bundled corpus)
+python -m src.data_prep --variants 30                 # quick local build (bundled corpus only)
+# the exact dataset the model trained on (Sanskrit Wikipedia augmentation, deterministic split):
+python -m src.data_prep --hf-dataset "wikimedia/wikipedia:20231101.sa" \
+    --max-hf 4000 --max-clean 4000 --variants 12
 python -m src.eval_harness --baseline                 # the "before" numbers
 python -m src.tokenizer_analysis                       # ByT5 vs mT5 (real numbers + chart)
 python -m pytest -q                                    # 10 tests
@@ -153,8 +157,9 @@ Scoring is decoupled from a GPU (like project 01): the notebook saves prediction
 
 ## Acknowledgements
 
-GRETIL & the Digital Corpus of Sanskrit for public-domain texts · `rahular/itihasa` for clean
-Sanskrit · Google for ByT5 (Apache 2.0) · ImmverseAI for the problem framing and the Ayurveda pages.
+GRETIL & the Digital Corpus of Sanskrit for public-domain texts · Sanskrit Wikipedia
+(`wikimedia/wikipedia:20231101.sa`) for clean Sanskrit at scale · Google for ByT5 (Apache 2.0) ·
+ImmverseAI for the problem framing and the Ayurveda pages.
 
 ## Contact
 

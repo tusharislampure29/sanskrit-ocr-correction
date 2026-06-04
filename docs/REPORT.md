@@ -23,8 +23,9 @@ with a linguistically-grounded corruption engine (`src/devanagari_noise.py`) ove
 
 - **Clean sources:** a curated public-domain corpus spanning ImmverseAI's IKS domains — Bhagavad
   Gita, Patanjali Yoga Sutras, Charaka-style Ayurveda, classical subhashitas — plus the 5 Ayurveda
-  pages shipped with the assignment, plus optional augmentation from `rahular/itihasa` (clean
-  Sanskrit from the epics) for scale.
+  pages shipped with the assignment, plus augmentation from **Sanskrit Wikipedia**
+  (`wikimedia/wikipedia:20231101.sa`, Parquet — loads reliably on modern `datasets`, unlike
+  script-based sets) for scale.
 - **Pipeline:** NFC-normalize → split on danda → length/script filter → dedupe → **split by clean
   line** (so no source verse leaks across train/val/test) → corrupt each line into multiple variants
   at 3 severity levels (`light`/`medium`/`heavy`).

@@ -76,9 +76,10 @@ print(os.getcwd())
 code("""
 # 4. Build the dataset on Colab: curated corpus + Ayurveda pages + HF augmentation.
 #    Sanskrit Wikipedia (Parquet, no loading script -> reliable on modern datasets).
-#    ~4k clean lines x 12 variants ≈ 40-50k corrupted->clean pairs.
+#    ~3k clean lines x 10 variants ≈ 24-30k corrupted->clean pairs. (Sized so the
+#    fp32 T4 run + per-epoch generative eval finish in a couple of hours.)
 subprocess.run('python -m src.data_prep --hf-dataset "wikimedia/wikipedia:20231101.sa" '
-               '--max-hf 4000 --max-clean 4000 --variants 12', shell=True, check=True)
+               '--max-hf 3000 --max-clean 3000 --variants 10', shell=True, check=True)
 import json
 print(open('data/processed/stats.json', encoding='utf-8').read())
 """)
@@ -146,27 +147,45 @@ def compute_metrics(eval_pred):
 """)
 
 code(f"""
-# 8. Train. fp16 on T4. push_to_hub + save each epoch => resume-safe across disconnects.
-import transformers
+# 8. Train. push_to_hub + save each epoch => resume-safe across disconnects.
+#
+# *** CRITICAL: precision. ***
+# T5/ByT5 are numerically UNSTABLE in fp16 — activations overflow fp16's range,
+# the loss goes to NaN on step 1, and you get a dead model (this exact bug bit an
+# earlier run: val_loss=nan, CER stuck at 1.08). So:
+#   - bf16 if the GPU supports it (A100 / RTX 3090+/4090/5090) — stable AND fast,
+#   - else fp32 on a T4 (Turing has no bf16 hardware; software bf16 is too slow).
+# NEVER fp16 here.
+import torch, transformers
 from transformers import (AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq,
                           Seq2SeqTrainingArguments, Seq2SeqTrainer)
 model = AutoModelForSeq2SeqLM.from_pretrained(BASE)
 collator = DataCollatorForSeq2Seq(tok, model=model)
 
+use_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+print(f"precision -> {{'bf16' if use_bf16 else 'fp32'}} (fp16 is disabled: unsafe for T5/ByT5)")
+
 training_args = Seq2SeqTrainingArguments(
     output_dir='byt5-sanskrit-ocr',
-    learning_rate=5e-4, per_device_train_batch_size=8,
-    per_device_eval_batch_size=16, gradient_accumulation_steps=2,
-    num_train_epochs=3, warmup_ratio=0.03, weight_decay=0.01,
-    fp16=True, predict_with_generate=True, generation_max_length=MAX_TGT,
+    learning_rate=3e-4, per_device_train_batch_size=4,
+    per_device_eval_batch_size=8, gradient_accumulation_steps=4,
+    num_train_epochs=3, warmup_ratio=0.05, weight_decay=0.01,
+    bf16=use_bf16, fp16=False,   # fp16 NEVER for T5/ByT5 (see note above)
+    predict_with_generate=True, generation_max_length=MAX_TGT,
     logging_steps=50, eval_strategy='epoch', save_strategy='epoch', save_total_limit=2,
     load_best_model_at_end=True, metric_for_best_model='cer', greater_is_better=False,
     push_to_hub=True, hub_model_id=HF_MODEL_ID, hub_strategy='every_save',
     report_to='none')
 
+# Cap the per-epoch eval set: generative eval (predict_with_generate) is slow,
+# and a 400-sample CER is a perfectly good early signal that training is healthy.
+_eval_ds = tokenized['validation']
+if len(_eval_ds) > 400:
+    _eval_ds = _eval_ds.select(range(400))
+
 trainer = Seq2SeqTrainer(
     model=model, args=training_args,
-    train_dataset=tokenized['train'], eval_dataset=tokenized['validation'],
+    train_dataset=tokenized['train'], eval_dataset=_eval_ds,
     data_collator=collator, compute_metrics=compute_metrics)
 trainer.train()
 trainer.push_to_hub()
@@ -176,12 +195,27 @@ print('model pushed ->', HF_MODEL_ID)
 
 code("""
 # 9. Evaluate on the held-out TEST set: before (noisy) vs after (corrected).
-import json
-subprocess.run(f"python -m src.eval_harness --model {HF_MODEL_ID} "
-               f"--test data/processed/test.jsonl --save eval/results/preds_test.json",
-               shell=True, check=True)
-print('--- BASELINE (uncorrected) ---')
+# Baseline first (no GPU, can't fail); then the model eval. Neither hard-fails the
+# notebook (check=False) — the model is already safe on the Hub by this point, and
+# the eval can also be re-run locally on CPU via --load-responses.
+import gc, json, torch
+# Free the T4's VRAM left over from training before spawning the eval process,
+# otherwise the still-resident trainer/model can push the eval into CUDA OOM
+# (the most common cause of a red error on this cell).
+for _name in ['trainer', 'model', 'collator']:
+    globals().pop(_name, None)
+gc.collect()
+torch.cuda.empty_cache()
+print('--- BASELINE (uncorrected noisy vs clean) ---')
 subprocess.run("python -m src.eval_harness --baseline --test data/processed/test.jsonl", shell=True)
+print('--- MODEL (corrected vs clean) ---')
+r = subprocess.run(f"python -m src.eval_harness --model {HF_MODEL_ID} "
+                   f"--test data/processed/test.jsonl --save eval/results/preds_test.json",
+                   shell=True)
+if r.returncode != 0:
+    print('NOTE: model eval exited non-zero (often CUDA OOM on a busy T4). The model is '
+          'already on the Hub; re-run this cell, or score on CPU with '
+          '`python -m src.eval_harness --load-responses eval/results/preds_test.json`.')
 """)
 
 code("""
