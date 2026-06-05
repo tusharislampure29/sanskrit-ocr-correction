@@ -171,6 +171,36 @@ spanning genres (Ayurveda / Yoga / poetry), if LoRA lands within a point or two 
 swappable few-MB adapters are the more deployable choice — exactly the kind of call this experiment
 is built to inform.
 
+## 11. Related work & honest positioning
+
+I want to be precise about what here is novel and what isn't — overclaiming in front of an NLP
+team is worse than honest scoping.
+
+**What is *not* novel.** Post-OCR correction is a mature task with two ICDAR shared tasks
+(2017/2019). Byte-level **ByT5 for post-OCR correction is a near-standard recipe** across many
+languages (Icelandic, Swedish, English, Dutch). And **Sanskrit-specific, open, byte-level post-OCR
+correction already exists**:
+- **Maheshwari et al., "A Benchmark and Dataset for Post-OCR Text Correction in Sanskrit"**
+  (Findings of EMNLP 2022) — the canonical Sanskrit post-OCR benchmark on *real* OCR of 30 scanned
+  books; their best model is **ByT5 + SLP1**. [aclanthology.org/2022.findings-emnlp.466](https://aclanthology.org/2022.findings-emnlp.466/) · [code](https://github.com/ayushbits/pe-ocr-sanskrit)
+- **Nehrdich et al., "ByT5-Sanskrit"** (2024) — an Apache-2.0 byte-level model that sets SOTA on
+  Sanskrit OCR post-correction (among other tasks). [arXiv:2409.13920](https://arxiv.org/abs/2409.13920)
+
+So "byte-level ByT5 for Sanskrit post-OCR" is **established prior art, not a first**. This project
+re-derives that design choice independently and explains *why* it's right (the tokenizer analysis).
+
+**What is the actual contribution (and it's an engineering/eval one, not a new model).** Prior
+Devanagari synthetic-data work generates noise *empirically* — **RoundTripOCR** (Kashid &
+Bhattacharyya, ICON 2024) renders fonts and re-OCRs them; **Guan & Greene** (2024) use CV
+glyph-similarity feature matching. I found **no prior work that builds an explicit, hand-authored,
+linguistically-grounded Devanagari corruption engine organized into named error families**
+(matra/anusvara/visarga/halant/consonant-glyph/danda/word-boundary/unicode/digit) **with a matching
+per-error-family recovery taxonomy**. That combination — *interpretable, controllable, rule-based
+error injection tied 1:1 to a per-family CER/WER breakdown*, packaged end-to-end as an open,
+reproducible HF model + dataset — is the uncommon and defensible piece. The numbers above
+(CER/WER on a held-out split) are competitive-table-stakes; the **diagnostic taxonomy and the
+controllable data engine** are what this project adds to the open ecosystem.
+
 ---
 
 ### Evaluation appendix

@@ -197,6 +197,20 @@ the notebook on a T4 (~15 min). For a multi-genre manuscript pipeline, if LoRA l
 or two of full FT, its tiny adapters are the more deployable choice — this experiment is built to
 make that call with numbers.
 
+## Related work (honest positioning)
+
+I'm not claiming a first here. **Sanskrit byte-level ByT5 post-OCR correction already exists** —
+[Maheshwari et al. (EMNLP 2022)](https://aclanthology.org/2022.findings-emnlp.466/) (ByT5+SLP1, the
+canonical benchmark) and [Nehrdich et al., ByT5-Sanskrit (2024)](https://arxiv.org/abs/2409.13920)
+(Apache-2.0, SOTA). Byte-level ByT5 for post-OCR is a near-standard recipe across many languages.
+
+**What this project adds** is an engineering/evaluation angle, not a new model: prior Devanagari
+synthetic-data work generates noise *empirically* (RoundTripOCR re-OCRs rendered fonts; Guan & Greene
+use CV glyph-similarity). This repo instead ships an **explicit, linguistically-grounded Devanagari
+corruption engine with named error families and a matching per-error-family recovery taxonomy** —
+interpretable, controllable noise tied 1:1 to a per-family CER/WER breakdown, packaged as a fully
+reproducible open model + dataset. See the report's "Related work" section for citations.
+
 ## What I'd do with more time
 
 - Train on **real** scanned-manuscript OCR output (Tesseract/Google Vision on GRETIL scans), not

@@ -50,6 +50,12 @@ bottom). **Numbers are filled from the final eval — ready to post. User clicks
 > taxonomy eval to expose where it's weak). For a real manuscript pipeline you'd pair it with a
 > human-review/abstain step.
 >
+> And honest about prior art: Sanskrit byte-level post-OCR correction already exists (Maheshwari et al.,
+> EMNLP 2022; Nehrdich et al., ByT5-Sanskrit 2024) — I'm not claiming a first. What I think is
+> genuinely useful here is the *interpretable* data side: a linguistically-grounded Devanagari
+> corruption engine with named error families and a matching per-family recovery eval, instead of
+> opaque render-and-re-OCR noise. Controllable noise → diagnosable model.
+>
 > This was a take-home for an Indian-knowledge-systems AI team, but it's the kind of unglamorous
 > infrastructure that decides whether a digitization product actually works. If you work on Indic
 > NLP or document AI, I'd love to compare notes. Apache 2.0, full eval + engineering report in the repo.
