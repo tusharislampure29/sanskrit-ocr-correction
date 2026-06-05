@@ -24,19 +24,19 @@
 
 | Metric | OCR output (before) | ByT5-corrected (after) | Δ |
 |---|---|---|---|
-| **WER** ↓ | `0.554` | `0.239` | **−57%** |
-| **Exact-match** ↑ | `0.000` | `0.261` | **+0.26** |
-| **CER** ↓ | `0.084` | `0.072` | **−14%** |
+| **WER** ↓ | `0.556` | `0.240` | **−57%** |
+| **Exact-match** ↑ | `0.000` | `0.252` | **+0.25** |
+| **CER** ↓ | `0.084` | `0.065` | **−22%** |
 
-> Measured on the **2,400-line held-out test split** (`src/eval_harness.py`, byte-level CER, NFC-normalized).
-> The model is a **strong word-level corrector**: it more than halves the word error rate and returns
-> **26% of lines exactly correct** (up from zero). Character error rate improves most where it matters —
-> on **heavily-degraded** scans (`0.125 → 0.082`, −35%). Honest nuance: on already-light noise it can
-> *over-correct* at the character level (CER `0.046 → 0.063`) even while it still fixes whole words
-> (WER `0.355 → 0.185`) — see [Limitations](#limitations-honest) and the per-severity tables below.
+> Measured on the **1,800-line held-out test split** (`src/eval_harness.py`, byte-level CER, NFC-normalized;
+> split **by clean line, zero overlap with training**). The model is a **strong word-level corrector**: it
+> more than halves the word error rate and returns **25% of lines exactly correct** (up from zero). Character
+> error rate improves most where it matters — on **heavily-degraded** scans (`0.122 → 0.074`, −40%). Honest
+> nuance: on already-light noise it can *over-correct* at the character level (CER `0.047 → 0.057`) even while
+> it still fixes whole words (WER `0.363 → 0.192`) — see [Limitations](#limitations-honest) and below.
 
-**Per-severity CER (before → after):** light `0.046 → 0.063` · medium `0.080 → 0.072` · heavy `0.125 → 0.082`
-**Per-severity WER (before → after):** light `0.355 → 0.185` · medium `0.556 → 0.238` · heavy `0.752 → 0.294`
+**Per-severity CER (before → after):** light `0.047 → 0.057` · medium `0.082 → 0.065` · heavy `0.122 → 0.074`
+**Per-severity WER (before → after):** light `0.363 → 0.192` · medium `0.562 → 0.241` · heavy `0.742 → 0.288`
 
 ![before/after CER, WER, exact-match](eval/charts/eval_comparison.png)
 
@@ -146,25 +146,25 @@ Scoring is decoupled from a GPU (like project 01): the notebook saves prediction
 Real held-out test predictions (noisy OCR → ByT5 correction → gold):
 
 ```
-# heavy noise — split conjunct, ASCII digits, danda-as-pipe, stray space  (CER 0.27 → 0.00)
-noisy : विश्तर््णं तावत् 4१290 कि.मि वर्त ते ॥
-model : विस्तीर्णं तावत् ४१२९० कि.मी वर्तते ।
-gold  : विस्तीर्णं तावत् ४१२९० कि.मी वर्तते ।
+# heavy noise — ASCII digits, split conjuncts, dropped matras, danda-as-pipe  (CER 0.23 → 0.00)
+noisy : अस्यां6०0 जणा: परयाणंकरतूं शक्णुवन्ति स्म |
+model : अस्यां ६०० जनाः प्रयाणं कर्तुं शक्नुवन्ति स्म ।
+gold  : अस्यां ६०० जनाः प्रयाणं कर्तुं शक्नुवन्ति स्म ।
 
-# medium noise — word-boundary merges + dropped matras  (CER 0.18 → 0.00)
-noisy : मनोजकुम ारः भारतयःअभ िनता ।
-model : मनोजकुमारः भारतीयः अभिनेता ।
-gold  : मनोजकुमारः भारतीयः अभिनेता ।
+# medium noise — merged words + dropped matras + ASCII period for danda  (CER 0.19 → 0.00)
+noisy : पौरातययुरोप दश् स्य अपुेक्षया बूृहत् वर्तते .
+model : पौरात्ययुरोपदेशस्य अपेक्षया बृहत् वर्तते ।
+gold  : पौरात्ययुरोपदेशस्य अपेक्षया बृहत् वर्तते ।
 
-# light noise — halant + matra slips  (CER 0.12 → 0.00)
-noisy : तेन् देवताः वजयिनः अभबन् ।
-model : तेन देवताः विजयिनः अभवन् ।
-gold  : तेन देवताः विजयिनः अभवन् ।
+# light noise — split word, matra slips, ASCII 'I' for danda  (CER 0.14 → 0.00)
+noisy : भगवतः निर्ण यः अन्यथ्ा आसित् I
+model : भगवतः निर्णयः अन्यथा आसीत् ।
+gold  : भगवतः निर्णयः अन्यथा आसीत् ।
 
-# honest failure — on a heavy multi-error line the model REPEATS a word (CER 0.18 → 0.29)
-noisy : आयोुर्वीज्ञान  आयरवद चरक संहिता सुश्रुत स्ंह िता ॥
-model : आयुर्विज्ञान आयुर्विज्ञान आयुर्वदा चरक संहिता सुश्रुत संहिता ।
-gold  : आयुर्विज्ञान आयुर्वेद चरक संहिता सुश्रुत संहिता ।
+# honest failure — on near-clean input the model over-corrects a correct letter (भ→म)  (CER 0.07 → 0.14)
+noisy : भाद्रपदे पत्रादीनां रौगभीः ।
+model : माद्रपदे पत्रादीनां रोगमिः ।
+gold  : भाद्रपदे पुत्रादीनां रोगभीः ।
 ```
 
 ## What I'd do with more time

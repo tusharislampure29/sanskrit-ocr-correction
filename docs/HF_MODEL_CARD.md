@@ -50,17 +50,17 @@ print(tok.decode(model.generate(ids, max_length=256, num_beams=4)[0], skip_speci
 
 ## Results
 
-Held-out test set (2,400 lines), before vs after correction:
+Held-out test set (1,800 lines; split by clean line, zero overlap with training), before vs after:
 
 | Metric | OCR output (before) | ByT5-corrected (after) | Δ |
 |---|---|---|---|
-| WER ↓ | 0.554 | **0.239** | −57% |
-| Exact-match ↑ | 0.000 | **0.261** | +0.26 |
-| CER ↓ | 0.084 | **0.072** | −14% |
+| WER ↓ | 0.556 | **0.240** | −57% |
+| Exact-match ↑ | 0.000 | **0.252** | +0.25 |
+| CER ↓ | 0.084 | **0.065** | −22% |
 
-A **strong word-level corrector**: it more than halves the word error rate and returns 26% of lines
-exactly correct. CER improves most on **heavily-degraded** input (0.125 → 0.082, −35%); on already-light
-noise it can over-correct at the character level (CER 0.046 → 0.063) while still cutting WER (0.355 → 0.185).
+A **strong word-level corrector**: it more than halves the word error rate and returns 25% of lines
+exactly correct. CER improves most on **heavily-degraded** input (0.122 → 0.074, −40%); on already-light
+noise it can over-correct at the character level (CER 0.047 → 0.057) while still cutting WER (0.363 → 0.192).
 Plus a per-error-family **taxonomy** eval (which error types it fixes best) — see the repo.
 
 ## Training

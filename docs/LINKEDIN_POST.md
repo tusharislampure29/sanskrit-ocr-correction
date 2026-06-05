@@ -34,10 +34,10 @@ bottom). **Numbers are filled from the final eval — ready to post. User clicks
 > every error it injects, so I can evaluate recovery *per error family* — not just one aggregate
 > number.
 >
-> Results on a 2,400-line held-out test set: word error rate 0.55 → 0.24 (−57%), and 26% of lines come
+> Results on an 1,800-line held-out test set: word error rate 0.56 → 0.24 (−57%), and 25% of lines come
 > out *exactly* correct (up from zero). Character error rate drops most where it matters — on the
-> heavily-degraded scans (0.125 → 0.082). And it's honest about its limits: on already-clean input it
-> can over-correct, which is exactly why I built a per-error-family taxonomy eval to show what it fixes
+> heavily-degraded scans (0.122 → 0.074, −40%). And it's honest about its limits: on already-clean input
+> it can over-correct, which is exactly why I built a per-error-family taxonomy eval to show what it fixes
 > and what it doesn't.
 >
 > Honest about what it is: trained on synthetic noise, so it's strongest on the error families it

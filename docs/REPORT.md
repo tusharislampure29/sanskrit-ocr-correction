@@ -76,52 +76,53 @@ Three layers (`src/eval_harness.py`):
 2. **Per-severity** — light/medium/heavy.
 3. **Error taxonomy** — corrupt test lines with *one* family at a time, measure recovery per family.
 
-**Results (2,400-line held-out test set):**
+**Results (1,800-line held-out test set; split by clean line, zero overlap with training):**
 
 | Metric | before | after | Δ |
 |---|---|---|---|
-| WER ↓ | 0.554 | **0.239** | −57% |
-| Exact-match ↑ | 0.000 | **0.261** | +0.26 |
-| CER ↓ | 0.084 | **0.072** | −14% |
+| WER ↓ | 0.556 | **0.240** | −57% |
+| Exact-match ↑ | 0.000 | **0.252** | +0.25 |
+| CER ↓ | 0.084 | **0.065** | −22% |
 
-Per-severity (CER before → after / WER before → after): light `0.046 → 0.063` / `0.355 → 0.185`;
-medium `0.080 → 0.072` / `0.556 → 0.238`; heavy `0.125 → 0.082` / `0.752 → 0.294`.
+Per-severity (CER before → after / WER before → after): light `0.047 → 0.057` / `0.363 → 0.192`;
+medium `0.082 → 0.065` / `0.562 → 0.241`; heavy `0.122 → 0.074` / `0.742 → 0.288`.
 
-The model is a **strong word-level corrector at every severity** (WER −48% to −61%, up to 37% of lines
+The model is a **strong word-level corrector at every severity** (WER −47% to −61%, up to 34% of lines
 made exactly correct), and a character-level improver on medium/heavy noise. The one regression is CER
-on *light* input, where it over-corrects characters even as it fixes whole words (WER still drops 48%) —
+on *light* input, where it over-corrects characters even as it fixes whole words (WER still drops 47%) —
 analysed in §7. Charts in `eval/charts/`; per-error-family taxonomy in `eval/results/taxonomy.json`.
 
 ## 7. Failure cases
 
 Two failure modes show up in the eval, both expected:
 
-1. **Repetition / over-generation on heavy multi-error lines.** When several words are badly mangled,
-   the seq2seq decoder occasionally repeats a token instead of recovering the intended word:
+1. **Character-level over-correction on near-clean input.** On lightly-noised text the model "fixes"
+   characters that were already correct, nudging CER up (light split `0.047 → 0.057`) even though WER
+   still improves (`0.363 → 0.192`). Example — it rewrites a correct भ as म:
    ```
-   noisy : आयोुर्वीज्ञान  आयरवद चरक संहिता सुश्रुत स्ंह िता ॥
-   model : आयुर्विज्ञान आयुर्विज्ञान आयुर्वदा चरक संहिता सुश्रुत संहिता ।   ← repeats "आयुर्विज्ञान"
-   gold  : आयुर्विज्ञान आयुर्वेद चरक संहिता सुश्रुत संहिता ।
+   noisy : भाद्रपदे पत्रादीनां रौगभीः ।
+   model : माद्रपदे पत्रादीनां रोगमिः ।   ← भ→म over-correction (CER 0.07 → 0.14)
+   gold  : भाद्रपदे पुत्रादीनां रोगभीः ।
    ```
-   Here CER actually rises (0.18 → 0.29) — the price of a decoder that will emit anything.
-2. **Character-level over-correction on light noise.** On near-clean input the model "fixes" things
-   that were already correct, nudging CER up (0.046 → 0.063 on the light split) even though WER still
-   improves (0.355 → 0.185). It learned to rewrite aggressively because most training pairs *needed*
-   rewriting; a fraction of clean-passthrough pairs, or a confidence/abstain gate (§9), would curb this.
+   It learned to rewrite aggressively because most training pairs *needed* rewriting; a fraction of
+   clean-passthrough pairs, or a confidence/abstain gate (§9), would curb this.
+2. **Truncation / derailment on long lines.** On the longest inputs the decoder sometimes stops early or
+   drifts at the tail (`…प्रतीतिर्जायते` → `…प्रार`), a known seq2seq behaviour at the generation-length
+   edge — addressable with longer `generation_max_length` and length penalties.
 
-**The taxonomy eval pinpoints exactly this** (isolated single-family corruption, CER before → after):
+**The taxonomy eval pinpoints the over-correction precisely** (isolated single-family corruption, CER before → after):
 
 | Family the model *recovers* | Δ | | Family it *over-corrects* | Δ |
 |---|---|---|---|---|
-| consonant_confuse | 0.114 → 0.083 (−27%) | | anusvara | 0.024 → 0.087 |
-| matra_confuse | 0.092 → 0.075 (−18%) | | visarga_drop | 0.030 → 0.078 |
-| space_delete | 0.083 → 0.068 (−18%) | | danda_confuse | 0.021 → 0.051 |
-| halant_delete | 0.081 → 0.069 (−14%) | | (all start < 0.03 CER) | |
+| consonant_confuse | 0.114 → 0.074 (−35%) | | anusvara | 0.024 → 0.082 |
+| halant_delete | 0.085 → 0.064 (−24%) | | visarga_drop | 0.031 → 0.073 |
+| space_delete | 0.080 → 0.061 (−24%) | | danda_confuse | 0.021 → 0.049 |
+| matra_confuse | 0.092 → 0.072 (−22%) | | (all start < 0.03 CER) | |
 
 The split is sharp and interpretable: the model **genuinely repairs the high-error families** (confused
-consonants, matras, merged words, split conjuncts) and **over-corrects families whose inputs were
+consonants, split conjuncts, merged words, matras) and **over-corrects families whose inputs were
 already nearly clean** (anusvara/visarga/danda all start below 0.03 CER). Note danda still reaches
-**60% exact-match** — it changes the right character but sometimes alters a neighbour. This is the
+**53% exact-match** — it changes the right character but sometimes alters a neighbour. This is the
 single most useful finding from the eval and the clearest lever for a v2 (selective/abstaining decode).
 
 Also expected: consonant-glyph confusions that yield a *valid but wrong* word (no local signal to fix),
@@ -150,11 +151,11 @@ on-device variant (the assignment's bonus items); a small Gradio demo.
 ### Evaluation appendix
 - Qualitative outputs (real held-out predictions):
   ```
-  विश्तर््णं तावत् 4१290 कि.मि वर्त ते ॥   →   विस्तीर्णं तावत् ४१२९० कि.मी वर्तते ।   (heavy, CER 0.27→0.00)
-  मनोजकुम ारः भारतयःअभ िनता ।           →   मनोजकुमारः भारतीयः अभिनेता ।         (medium, CER 0.18→0.00)
-  तेन् देवताः वजयिनः अभबन् ।             →   तेन देवताः विजयिनः अभवन् ।            (light, CER 0.12→0.00)
+  अस्यां6०0 जणा: परयाणंकरतूं शक्णुवन्ति स्म |   →   अस्यां ६०० जनाः प्रयाणं कर्तुं शक्नुवन्ति स्म ।   (heavy, CER 0.23→0.00)
+  पौरातययुरोप दश् स्य अपुेक्षया बूृहत् वर्तते .   →   पौरात्ययुरोपदेशस्य अपेक्षया बृहत् वर्तते ।        (medium, CER 0.19→0.00)
+  भगवतः निर्ण यः अन्यथ्ा आसित् I                →   भगवतः निर्णयः अन्यथा आसीत् ।                   (light, CER 0.14→0.00)
   ```
-- Before vs after: WER 0.554→0.239 (−57%), EM 0.000→0.261, CER 0.084→0.072 (−14%). Charts: `eval/charts/`
+- Before vs after: WER 0.556→0.240 (−57%), EM 0.000→0.252, CER 0.084→0.065 (−22%). Charts: `eval/charts/`
   (`eval_comparison.png`, `taxonomy.png`, `training_loss.png`).
-- Hallucination/error analysis: see §7 — repetition on heavy lines; character-level over-correction on
-  light input.
+- Hallucination/error analysis: see §7 — character-level over-correction on near-clean input; truncation
+  on the longest lines.
