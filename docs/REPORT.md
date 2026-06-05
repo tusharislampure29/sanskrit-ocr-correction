@@ -109,6 +109,21 @@ Two failure modes show up in the eval, both expected:
    improves (0.355 → 0.185). It learned to rewrite aggressively because most training pairs *needed*
    rewriting; a fraction of clean-passthrough pairs, or a confidence/abstain gate (§9), would curb this.
 
+**The taxonomy eval pinpoints exactly this** (isolated single-family corruption, CER before → after):
+
+| Family the model *recovers* | Δ | | Family it *over-corrects* | Δ |
+|---|---|---|---|---|
+| consonant_confuse | 0.114 → 0.083 (−27%) | | anusvara | 0.024 → 0.087 |
+| matra_confuse | 0.092 → 0.075 (−18%) | | visarga_drop | 0.030 → 0.078 |
+| space_delete | 0.083 → 0.068 (−18%) | | danda_confuse | 0.021 → 0.051 |
+| halant_delete | 0.081 → 0.069 (−14%) | | (all start < 0.03 CER) | |
+
+The split is sharp and interpretable: the model **genuinely repairs the high-error families** (confused
+consonants, matras, merged words, split conjuncts) and **over-corrects families whose inputs were
+already nearly clean** (anusvara/visarga/danda all start below 0.03 CER). Note danda still reaches
+**60% exact-match** — it changes the right character but sometimes alters a neighbour. This is the
+single most useful finding from the eval and the clearest lever for a v2 (selective/abstaining decode).
+
 Also expected: consonant-glyph confusions that yield a *valid but wrong* word (no local signal to fix),
 and out-of-distribution scanner artifacts absent from the synthetic noise model.
 
