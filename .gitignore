@@ -23,6 +23,11 @@ checkpoint-*/
 # eval raw json + transient logs (kept as summaries in docs/ instead)
 eval/results/*.json
 eval/results/*.log
+# ...but keep the LoRA-vs-full result (deterministic; the chart + README cite it)
+!eval/results/lora_vs_full.json
+
+# throwaway models written by the LoRA-vs-full experiment (full ckpt ~1 GB)
+eval/compare_runs/
 
 # scratch/throwaway helper scripts (underscore-prefixed)
 scripts/_*.py

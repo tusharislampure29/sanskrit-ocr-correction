@@ -136,6 +136,9 @@ python -m pytest -q                                    # 10 tests
 # Train on a free Colab T4: open notebooks/train_colab.ipynb, set T4 runtime,
 # add HF_TOKEN to Colab Secrets, Run all. It builds the (augmented) dataset, trains,
 # pushes the model + dataset to the Hub, evaluates, and runs the taxonomy + demo.
+
+# Bonus — LoRA vs full fine-tuning (no token needed): open notebooks/lora_vs_full.ipynb
+# on a T4, Run all. Trains both ways on identical data/budget/seed and reports the tradeoff.
 ```
 
 Scoring is decoupled from a GPU (like project 01): the notebook saves predictions JSON, and
@@ -166,6 +169,25 @@ noisy : भाद्रपदे पत्रादीनां रौगभी�
 model : माद्रपदे पत्रादीनां रोगमिः ।
 gold  : भाद्रपदे पुत्रादीनां रोगभीः ।
 ```
+
+## Bonus — LoRA vs full fine-tuning
+
+A controlled mini-experiment (`src/train_compare.py`, `notebooks/lora_vs_full.ipynb`): fine-tune
+ByT5-small **two ways on identical data, budget, and seed**, and compare. The parameter/storage gap
+is deterministic and measured directly:
+
+| | Full fine-tune | LoRA (r=16) | Ratio |
+|---|---|---|---|
+| Trainable params | 299,637,760 (100%) | **1,187,840 (0.40%)** | **252× fewer** |
+| Artifact shipped | ~1,143 MB checkpoint | **4.55 MB adapter** | **~250× smaller** |
+
+![LoRA vs full](eval/charts/lora_vs_full.png)
+
+That's LoRA's pitch, quantified: train 0.4% of the weights, ship a few-MB adapter (swappable
+per-domain) instead of a ~1 GB checkpoint. Held-out CER/WER quality columns are produced by running
+the notebook on a T4 (~15 min). For a multi-genre manuscript pipeline, if LoRA lands within a point
+or two of full FT, its tiny adapters are the more deployable choice — this experiment is built to
+make that call with numbers.
 
 ## What I'd do with more time
 

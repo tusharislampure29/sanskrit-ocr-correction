@@ -1,0 +1,41 @@
+{
+  "experiment": "lora_vs_full",
+  "base_model": "google/byt5-small",
+  "note": "Parameter/storage columns are deterministic and were measured directly (no training). The quality columns (CER/WER/exact-match) are produced by running notebooks/lora_vs_full.ipynb on a GPU (Colab T4, ~15 min) — `eval` is null until then.",
+  "config": {
+    "max_train": 4000,
+    "max_eval": 400,
+    "max_steps": 200,
+    "batch_size": 8,
+    "grad_accum": 2,
+    "seed": 13,
+    "lora_r": 16,
+    "lora_alpha": 32
+  },
+  "results": [
+    {
+      "mode": "full",
+      "learning_rate": 0.0003,
+      "trainable_params": 299637760,
+      "total_params": 299637760,
+      "trainable_pct": 100.0,
+      "ship_size_mb": 1143.0,
+      "train_seconds": null,
+      "max_steps": 200,
+      "precision": "bf16-or-fp32",
+      "eval": null
+    },
+    {
+      "mode": "lora",
+      "learning_rate": 0.001,
+      "trainable_params": 1187840,
+      "total_params": 300825600,
+      "trainable_pct": 0.395,
+      "ship_size_mb": 4.55,
+      "train_seconds": null,
+      "max_steps": 200,
+      "precision": "bf16-or-fp32",
+      "eval": null
+    }
+  ]
+}
