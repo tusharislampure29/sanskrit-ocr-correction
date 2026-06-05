@@ -20,8 +20,8 @@ datasets:
 # ByT5-Sanskrit-OCR — Post-OCR Correction for Sanskrit/Devanagari
 
 A byte-level **ByT5-small** fine-tuned to correct OCR'd Sanskrit/Devanagari text — dropped vowel
-signs, confused nasals (ं/ँ), split conjuncts, visually-similar consonants (व/ब, श/ष/स), and danda
-errors (॥→`|`). Trained on synthetic OCR noise from a linguistically-grounded Devanagari corruption
+signs, confused nasals (anusvara vs chandrabindu), split conjuncts, visually-similar consonants
+(व/ब, श/ष/स), and danda errors (॥ becoming a plain `|`). Trained on synthetic OCR noise from a linguistically-grounded Devanagari corruption
 engine. Built on a free Colab T4.
 
 - **Input:** noisy OCR Sanskrit, prefixed with `correct: `

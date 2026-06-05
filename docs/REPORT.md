@@ -9,7 +9,7 @@ the training run (`notebooks/train_colab.ipynb`); everything else is measured an
 ## 1. Problem understanding
 
 OCR on Sanskrit/Devanagari fails in characteristic ways: dropped vowel signs (matras), confused
-nasals (ं/ँ), split conjuncts when the halant (्) is missed, visually-confusable consonants (व/ब,
+nasals (anusvara vs chandrabindu), split conjuncts when the halant/virama is missed, visually-confusable consonants (व/ब,
 श/ष/स), and danda errors (॥ read as `|`). These break downstream NLP — search, translation, RAG —
 which is exactly the bottleneck for a manuscript-digitization product like BharatiyaGPT. The task:
 a model that takes noisy OCR output and returns clean, correctly-encoded Sanskrit. I framed it as

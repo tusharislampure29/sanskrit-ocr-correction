@@ -1,7 +1,8 @@
 # Sanskrit Post-OCR Correction (ByT5)
 
-> OCR butchers Sanskrit. Scanners drop the small vowel strokes, confuse ं/ँ, split conjuncts, and
-> turn ॥ into `|`. This is a byte-level **ByT5** model that *reads broken Devanagari and repairs it* —
+> OCR butchers Sanskrit. Scanners drop the small vowel strokes, confuse the nasal marks, split
+> conjuncts, and turn the verse-ending double-danda (॥) into a plain `|`. This is a byte-level
+> **ByT5** model that *reads broken Devanagari and repairs it* —
 > trained entirely on synthetic OCR noise from a linguistically-grounded corruption engine, on a free Colab T4.
 
 **Author** · Tushar Islampure ([github.com/tusharislampure29](https://github.com/tusharislampure29))
@@ -86,7 +87,7 @@ how OCR actually fails on Devanagari**, each calibrated to real failure modes:
 |---|---|---|
 | matra confuse | ि↔ी, े↔ै, ो↔ौ | short/long vowel hooks look near-identical |
 | matra delete | कारस्ते → कारस्त | the small stroke is the #1 missed mark |
-| anusvara/nasal | पित्तं → पित्त / पित्तँ | ं vs ँ vs nothing |
+| anusvara/nasal | पित्तं → पित्त / पित्तँ | anusvara vs chandrabindu, easily swapped or dropped |
 | visarga loss | दोषाः → दोषा / दोषा: | dot-pair dropped or read as ASCII `:` |
 | halant/virama | क्त → कत | conjuncts split when the halant is missed |
 | consonant glyph | व↔ब, घ↔ध, भ↔म, श↔ष↔स | visually confusable letters |
