@@ -161,15 +161,26 @@ The parameter and storage gap is deterministic and measured directly:
 | Trainable params | 299,637,760 (100%) | **1,187,840 (0.40%)** | **252× fewer** |
 | Artifact shipped | ~1,143 MB (fp32 checkpoint) | **4.55 MB adapter** | **~250× smaller** |
 
-That is LoRA's entire value proposition, quantified: you train 0.4% of the weights and ship a
-few-MB adapter instead of a ~1 GB checkpoint — and you can keep many per-domain adapters around a
-single frozen base. Full FT moves every weight, which typically wins on raw single-task quality at
-the cost of storage and a full per-task copy. The **held-out CER/WER quality columns** are produced
-by running the notebook on a GPU (Colab T4, ~15 min) — it writes `eval/results/lora_vs_full.json`
-and the `eval/charts/lora_vs_full.png` comparison chart. **Product read:** for a manuscript pipeline
-spanning genres (Ayurveda / Yoga / poetry), if LoRA lands within a point or two of full FT, its
-swappable few-MB adapters are the more deployable choice — exactly the kind of call this experiment
-is built to inform.
+That is LoRA's value proposition, quantified: you train 0.4% of the weights and ship a few-MB
+adapter instead of a ~1 GB checkpoint — and you can keep many per-domain adapters around one frozen
+base. **Held-out quality** (run on Kaggle GPU, equal 200-step budget, 400 test lines):
+
+| | Full fine-tune | LoRA (r=16) |
+|---|---|---|
+| WER ↓ | 0.582 → **0.372** (−36%) | 0.582 → 0.519 (−11%) |
+| Exact-match ↑ | **0.10** | 0.033 |
+| CER | 0.087 → 0.096 | 0.087 → 0.145 |
+| train time (P100) | 320 s | 248 s |
+
+**Honest interpretation.** At an equal, deliberately small budget, **full fine-tuning clearly wins
+on quality** — it learns word-level correction much faster (WER −36% vs −11%, 3× the exact-match).
+LoRA's advantage is purely **efficiency** (252× fewer params, 250× smaller artifact, ~23% faster
+per the same step count). Both are *under-trained* at 200 steps, so neither improves CER yet — note
+the production model (trained far longer) *does* cut CER by 22%; this section is a budget-controlled
+tradeoff study, not the production run. **Product read:** full FT for best single-task quality; LoRA
+when you need many swappable few-MB per-domain adapters (Ayurveda / Yoga / poetry) and can spend more
+steps to close the quality gap. The numbers make that tradeoff concrete instead of hand-wavy.
+Artifacts: `eval/results/lora_vs_full.json`, `eval/charts/lora_vs_full.png`.
 
 ## 11. Related work & honest positioning
 

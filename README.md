@@ -191,11 +191,21 @@ is deterministic and measured directly:
 
 ![LoRA vs full](eval/charts/lora_vs_full.png)
 
-That's LoRA's pitch, quantified: train 0.4% of the weights, ship a few-MB adapter (swappable
-per-domain) instead of a ~1 GB checkpoint. Held-out CER/WER quality columns are produced by running
-the notebook on a T4 (~15 min). For a multi-genre manuscript pipeline, if LoRA lands within a point
-or two of full FT, its tiny adapters are the more deployable choice — this experiment is built to
-make that call with numbers.
+And the quality, measured on Kaggle GPU at an **equal 200-step budget** (held-out 400 lines):
+
+| | Full fine-tune | LoRA (r=16) |
+|---|---|---|
+| WER ↓ | 0.582 → **0.372** (−36%) | 0.582 → 0.519 (−11%) |
+| Exact-match ↑ | **0.10** | 0.033 |
+| train time (P100) | 320 s | 248 s (−23%) |
+
+**Honest read:** at an equal, deliberately small budget, **full fine-tuning wins on quality** — it
+learns word-level correction much faster (WER −36% vs −11%, 3× the exact-match). LoRA's win is pure
+**efficiency**: 252× fewer trainable params, a 250× smaller artifact, ~23% faster. (Both are
+*under-trained* at 200 steps — neither improves CER yet; the production model trains far longer and
+*does* cut CER. This is a budget-controlled tradeoff study, not the production run.) The deployment
+takeaway: full FT for best single-task quality; LoRA when you need many swappable few-MB per-domain
+adapters and can afford more steps to close the gap. Reproducible: `notebooks/lora_vs_full.ipynb`.
 
 ## Related work (honest positioning)
 
