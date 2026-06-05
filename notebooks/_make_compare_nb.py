@@ -13,6 +13,8 @@ from pathlib import Path
 
 REPO_URL = "https://github.com/tusharislampure29/sanskrit-ocr-correction"
 HF_DATASET_ID = "tusharislampure29/sanskrit-ocr-correction"
+NB_PATH = "notebooks/lora_vs_full.ipynb"
+GH = "tusharislampure29/sanskrit-ocr-correction"
 
 CELLS = []
 
@@ -25,6 +27,11 @@ def code(src):
     CELLS.append({"cell_type": "code", "metadata": {}, "execution_count": None,
                   "outputs": [], "source": src.strip("\n").splitlines(keepends=True)})
 
+
+md(f"""
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{GH}/blob/main/{NB_PATH}) &nbsp;
+[![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/{GH}/blob/main/{NB_PATH})
+""")
 
 md(f"""
 # LoRA vs full fine-tuning — Sanskrit Post-OCR Correction (bonus experiment)

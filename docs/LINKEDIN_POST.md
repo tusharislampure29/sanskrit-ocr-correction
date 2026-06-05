@@ -40,6 +40,11 @@ bottom). **Numbers are filled from the final eval — ready to post. User clicks
 > it can over-correct, which is exactly why I built a per-error-family taxonomy eval to show what it fixes
 > and what it doesn't.
 >
+> I also ran a **LoRA vs full fine-tuning** study (same data, budget, seed): LoRA trains just 0.4% of
+> the weights (1.2M params) into a **4.5 MB adapter** vs a ~1 GB full checkpoint — a 250× smaller
+> artifact. For a multi-genre manuscript pipeline, swappable per-domain adapters are the deployable
+> choice if quality holds. One-click reproducible on Colab/Kaggle from the repo.
+>
 > Honest about what it is: trained on synthetic noise, so it's strongest on the error families it
 > was shown — novel scanner artifacts are out of distribution (which is exactly why I built the
 > taxonomy eval to expose where it's weak). For a real manuscript pipeline you'd pair it with a

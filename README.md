@@ -9,6 +9,14 @@
 **Dataset** · [`tusharislampure29/sanskrit-ocr-correction`](https://huggingface.co/datasets/tusharislampure29/sanskrit-ocr-correction)
 **Base** · `google/byt5-small` (Apache 2.0) · **Method** · seq2seq fine-tune, byte-level · **License** · Apache 2.0
 
+[![Open training in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tusharislampure29/sanskrit-ocr-correction/blob/main/notebooks/train_colab.ipynb)
+[![Open training in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/tusharislampure29/sanskrit-ocr-correction/blob/main/notebooks/train_colab.ipynb)
+&nbsp;·&nbsp; LoRA-vs-full bonus:
+[![Open bonus in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tusharislampure29/sanskrit-ocr-correction/blob/main/notebooks/lora_vs_full.ipynb)
+[![Open bonus in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/tusharislampure29/sanskrit-ocr-correction/blob/main/notebooks/lora_vs_full.ipynb)
+&nbsp;·&nbsp;
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green) ![tests](https://img.shields.io/badge/tests-10%20passing-brightgreen)
+
 > Built for the ImmverseAI AI/ML take-home (Track 3 — Post-OCR Correction for Sanskrit/Indic), and
 > shipped as an open, reproducible project. It targets exactly the problem behind BharatiyaGPT:
 > turning noisy scans of classical Indian texts (the sample data is **Ayurveda**) into clean,
