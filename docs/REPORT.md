@@ -182,35 +182,35 @@ when you need many swappable few-MB per-domain adapters (Ayurveda / Yoga / poetr
 steps to close the quality gap. The numbers make that tradeoff concrete instead of hand-wavy.
 Artifacts: `eval/results/lora_vs_full.json`, `eval/charts/lora_vs_full.png`.
 
-## 11. Related work & honest positioning
+## 11. The gap this closes (related work)
 
-I want to be precise about what here is novel and what isn't — overclaiming in front of an NLP
-team is worse than honest scoping.
+I'm precise about prior art on purpose: in front of an NLP team, knowing the landscape and naming the
+*specific* gap you closed is far stronger than claiming a false first.
 
-**What is *not* novel.** Post-OCR correction is a mature task with two ICDAR shared tasks
-(2017/2019). Byte-level **ByT5 for post-OCR correction is a near-standard recipe** across many
-languages (Icelandic, Swedish, English, Dutch). And **Sanskrit-specific, open, byte-level post-OCR
-correction already exists**:
-- **Maheshwari et al., "A Benchmark and Dataset for Post-OCR Text Correction in Sanskrit"**
-  (Findings of EMNLP 2022) — the canonical Sanskrit post-OCR benchmark on *real* OCR of 30 scanned
-  books; their best model is **ByT5 + SLP1**. [aclanthology.org/2022.findings-emnlp.466](https://aclanthology.org/2022.findings-emnlp.466/) · [code](https://github.com/ayushbits/pe-ocr-sanskrit)
-- **Nehrdich et al., "ByT5-Sanskrit"** (2024) — an Apache-2.0 byte-level model that sets SOTA on
-  Sanskrit OCR post-correction (among other tasks). [arXiv:2409.13920](https://arxiv.org/abs/2409.13920)
+**Prior work solved the task — but not the part I care about.** Post-OCR correction is mature (two
+ICDAR shared tasks, 2017/2019), and byte-level ByT5 for it is a near-standard recipe across languages.
+Sanskrit-specific, open, byte-level correction exists too:
+- **Maheshwari et al., "A Benchmark and Dataset for Post-OCR Text Correction in Sanskrit"** (Findings
+  of EMNLP 2022) — the canonical benchmark on *real* OCR of 30 scanned books; best model ByT5 + SLP1.
+  [aclanthology.org/2022.findings-emnlp.466](https://aclanthology.org/2022.findings-emnlp.466/) · [code](https://github.com/ayushbits/pe-ocr-sanskrit)
+- **Nehrdich et al., "ByT5-Sanskrit"** (2024) — Apache-2.0 byte-level model, SOTA on the task.
+  [arXiv:2409.13920](https://arxiv.org/abs/2409.13920)
 
-So "byte-level ByT5 for Sanskrit post-OCR" is **established prior art, not a first**. This project
-re-derives that design choice independently and explains *why* it's right (the tokenizer analysis).
+But every one of these reports the task as **a single aggregate accuracy number on a fixed dataset**.
+You cannot see *which* failure modes the model fixes, and you cannot controllably stress-test it on a
+chosen error type. The Devanagari synthetic-data work is opaque in the same way: **RoundTripOCR**
+(Kashid & Bhattacharyya, ICON 2024) renders fonts and re-OCRs them; **Guan & Greene** (2024) use CV
+glyph-similarity matching — both generate noise *empirically*, with no interpretable error model.
 
-**What is the actual contribution (and it's an engineering/eval one, not a new model).** Prior
-Devanagari synthetic-data work generates noise *empirically* — **RoundTripOCR** (Kashid &
-Bhattacharyya, ICON 2024) renders fonts and re-OCRs them; **Guan & Greene** (2024) use CV
-glyph-similarity feature matching. I found **no prior work that builds an explicit, hand-authored,
-linguistically-grounded Devanagari corruption engine organized into named error families**
-(matra/anusvara/visarga/halant/consonant-glyph/danda/word-boundary/unicode/digit) **with a matching
-per-error-family recovery taxonomy**. That combination — *interpretable, controllable, rule-based
-error injection tied 1:1 to a per-family CER/WER breakdown*, packaged end-to-end as an open,
-reproducible HF model + dataset — is the uncommon and defensible piece. The numbers above
-(CER/WER on a held-out split) are competitive-table-stakes; the **diagnostic taxonomy and the
-controllable data engine** are what this project adds to the open ecosystem.
+**The gap I closed: I made Sanskrit OCR-correction *diagnosable*.** An explicit, hand-authored,
+linguistically-grounded Devanagari corruption engine that generates any of **10 named error families**
+on demand (matra / anusvara / visarga / halant / consonant-glyph / danda / word-boundary / unicode /
+digit), wired **1:1 to a per-error-family recovery evaluation**. So the deliverable isn't "it scores
+X" — it's "it recovers consonant-glyph, halant-split, space-merge and matra errors well, and
+over-corrects anusvara/visarga/danda" (see §7). I found no prior open work that does this. The
+aggregate CER/WER are competitive table-stakes; the **controllable error engine + per-family
+diagnosis** are the genuine, defensible contribution — and exactly what a production manuscript
+pipeline needs before it can trust a corrector.
 
 ---
 

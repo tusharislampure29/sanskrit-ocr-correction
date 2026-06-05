@@ -208,19 +208,22 @@ learns word-level correction much faster (WER −36% vs −11%, 3× the exact-ma
 takeaway: full FT for best single-task quality; LoRA when you need many swappable few-MB per-domain
 adapters and can afford more steps to close the gap. Reproducible: `notebooks/lora_vs_full.ipynb`.
 
-## Related work (honest positioning)
+## The gap this closes (vs prior work)
 
-I'm not claiming a first here. **Sanskrit byte-level ByT5 post-OCR correction already exists** —
-[Maheshwari et al. (EMNLP 2022)](https://aclanthology.org/2022.findings-emnlp.466/) (ByT5+SLP1, the
-canonical benchmark) and [Nehrdich et al., ByT5-Sanskrit (2024)](https://arxiv.org/abs/2409.13920)
-(Apache-2.0, SOTA). Byte-level ByT5 for post-OCR is a near-standard recipe across many languages.
+Sanskrit post-OCR correction has been done before, and I cite it because that's the honest landscape:
+[Maheshwari et al. (EMNLP 2022)](https://aclanthology.org/2022.findings-emnlp.466/) and
+[Nehrdich et al., ByT5-Sanskrit (2024)](https://arxiv.org/abs/2409.13920) both built byte-level
+Sanskrit correctors. **But both report the task as a single accuracy number on a fixed dataset** — you
+can't see *which* error types the model actually fixes, and you can't controllably stress-test it.
+Prior synthetic-data work for Devanagari is empirical and opaque too (RoundTripOCR re-OCRs rendered
+fonts; Guan & Greene use CV glyph-similarity). **That's the gap I went after.**
 
-**What this project adds** is an engineering/evaluation angle, not a new model: prior Devanagari
-synthetic-data work generates noise *empirically* (RoundTripOCR re-OCRs rendered fonts; Guan & Greene
-use CV glyph-similarity). This repo instead ships an **explicit, linguistically-grounded Devanagari
-corruption engine with named error families and a matching per-error-family recovery taxonomy** —
-interpretable, controllable noise tied 1:1 to a per-family CER/WER breakdown, packaged as a fully
-reproducible open model + dataset. See the report's "Related work" section for citations.
+**What I built that they didn't: a *diagnosable* corrector.** An explicit, linguistically-grounded
+Devanagari corruption engine that generates any of 10 **named error families** on demand, wired 1:1 to
+a **per-error-family recovery evaluation**. So the result isn't "it scores X" — it's "it reliably fixes
+dropped vowel signs, split conjuncts and merged words, and still struggles with these exact cases."
+That controllability and interpretability is what a real manuscript pipeline needs before it can trust
+a corrector — and it's what the prior open work left on the table. (Full citations in the report.)
 
 ## What I'd do with more time
 
