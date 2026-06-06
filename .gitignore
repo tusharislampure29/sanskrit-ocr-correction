@@ -36,6 +36,9 @@ scripts/_*.py
 CLAUDE.md
 docs/SUBMISSION_EMAIL.md
 
+# ImmverseAI assignment source materials — local reference only, NEVER publish
+_assignment_source/
+
 # OS
 .DS_Store
 Thumbs.db
