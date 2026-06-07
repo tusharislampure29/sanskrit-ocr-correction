@@ -35,6 +35,7 @@ scripts/_*.py
 # internal dev notes (kept local; not part of the public/submitted repo)
 CLAUDE.md
 docs/SUBMISSION_EMAIL.md
+docs/INTERVIEW_PREP.md
 
 # ImmverseAI assignment source materials — local reference only, NEVER publish
 _assignment_source/
